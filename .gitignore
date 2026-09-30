@@ -15,6 +15,9 @@ build/
 # User-uploaded content (service photos, prescriptions, medicine slips) — runtime data, not source
 cadovet-server/uploads/
 
+# Local database backups (see cadovet-server/scripts/backup-db.sh)
+cadovet-server/backups/
+
 # Logs
 logs/
 *.log

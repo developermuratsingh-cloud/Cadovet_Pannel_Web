@@ -164,4 +164,4 @@ async function createStaff(adminToken, { role = 'PHARMACY', password = 'Temp1234
   return { id: r.body.data.id, email, password };
 }
 
-module.exports = { start, stop, api, call, db, otpFor, resetCodeFor, clearResetCode, createStaff, uniqueMobile, signupCustomer, loginWithOtp, loginStaff, loginStaffPassword, createPet, futureDate, firstActiveDoctor, digits, requestAppointment, pendingRequest };
+module.exports = { start, stop, api, call, db, otpFor, resetCodeFor, clearResetCode, createStaff, uniqueMobile, signupCustomer, loginWithOtp, loginStaff, loginStaffPassword, createPet, futureDate, firstActiveDoctor, firstActiveLocationId, digits, requestAppointment, pendingRequest };

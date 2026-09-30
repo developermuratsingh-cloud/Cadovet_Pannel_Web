@@ -14,8 +14,10 @@ const STAFF = [
   ['meera@cadovet.com', 'doctor123', 'DOCTOR', '9876543215'],
   ['ops@cadovet.com', 'staff123', 'OPERATIONAL_HEAD', '9876543212'],
   ['operations.head@cadovet.com', 'OpsHead!2026#Cado', 'OPERATIONAL_HEAD', '9876543218'],
-  ['inventory@cadovet.com', 'admin123', 'SUBADMIN', '9876543216'],
-  ['pharmacy@cadovet.com', 'admin123', 'SUBADMIN', '9876543217'],
+  // Seeded as SUBADMIN by migrate_phase5_6, then migrate_split_subadmin moves each to the role matching its
+  // department (MEDICINE -> PHARMACY, INVENTORY -> INVENTORY) and deletes the SUBADMIN role entirely.
+  ['inventory@cadovet.com', 'admin123', 'INVENTORY', '9876543216'],
+  ['pharmacy@cadovet.com', 'admin123', 'PHARMACY', '9876543217'],
 ];
 const CUSTOMERS = [['customer@cadovet.com', '9876543213'], ['sarah@cadovet.com', '9876543214']];
 

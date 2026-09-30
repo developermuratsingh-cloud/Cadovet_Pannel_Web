@@ -33,7 +33,7 @@ describe('Roles: who is who', () => {
     assert.equal(await roleOf(ops), 'OPERATIONAL_HEAD');
     assert.equal(await roleOf(drA), 'DOCTOR');
     assert.equal(await roleOf(drB), 'DOCTOR');
-    assert.equal(await roleOf(inventory), 'SUBADMIN');
+    assert.equal(await roleOf(inventory), 'INVENTORY');
   });
   it('only the operational head and admin can assign; doctors and desk staff cannot', async () => {
     const perms = async (token) => (await api.get('/api/auth/me', { token })).body.data.permissions;
@@ -310,7 +310,7 @@ describe('A doctor sees only what is assigned to them', () => {
   });
   it('a doctor account with no doctor profile sees nothing at all (never "everything")', async () => {
     const email = `ghost${Date.now()}@cadovet.test`;
-    const made = await api.post('/api/doctors', { name: 'Ghost Doctor', email, password: 'Temp1234', specialization: 'Testing' }, { token: admin });
+    const made = await api.post('/api/doctors', { name: 'Ghost Doctor', email, password: 'Temp1234', specialization: 'Testing', location_ids: [await h.firstActiveLocationId()] }, { token: admin });
     assert.equal(made.status, 201, JSON.stringify(made.body));
     const gid = made.body.data.id;
     const token = await h.loginStaff(email, 'Temp1234');
@@ -404,7 +404,8 @@ describe('Staff accounts: email + password, set up by the administrator', () => 
   const TEMP = 'Temp1234';
   it('the admin adds a doctor with email + a temporary password; the doctor signs in and can be assigned work', async () => {
     const email = `newdoc${Date.now()}@cadovet.test`;
-    const r = await api.post('/api/doctors', { name: 'Dr. New Vet', email, password: TEMP, specialization: 'Exotic pets', qualification: 'BVSc', available_days: 'Mon,Wed', available_from: '10:00', available_to: '14:00', consultation_fee: 700 }, { token: admin });
+    const locationId = await h.firstActiveLocationId();
+    const r = await api.post('/api/doctors', { name: 'Dr. New Vet', email, password: TEMP, specialization: 'Exotic pets', qualification: 'BVSc', available_days: 'Mon,Wed', available_from: '10:00', available_to: '14:00', consultation_fee: 700, location_ids: [locationId] }, { token: admin });
     assert.equal(r.status, 201, JSON.stringify(r.body));
     const login = await api.post('/api/auth/login', { identifier: email, password: TEMP });
     assert.equal(login.status, 200);
@@ -418,7 +419,7 @@ describe('Staff accounts: email + password, set up by the administrator', () => 
     assert.equal((await assign(ops, req.appointment.id, { doctor_id: r.body.data.id, appointment_time: '03:00 PM' })).status, 400, 'works Mon/Wed 10:00-14:00 only');
   });
   it('doctor creation needs a real email and a policy-compliant password, and validates schedule and duplicates', async () => {
-    const ok = { name: 'Dr. Valid', specialization: 'General' };
+    const ok = { name: 'Dr. Valid', specialization: 'General', location_ids: [await h.firstActiveLocationId()] };
     const email = () => `d${Date.now()}${Math.floor(Math.random() * 1e6)}@cadovet.test`;
     assert.equal((await api.post('/api/doctors', { ...ok, password: TEMP }, { token: admin })).status, 400, 'email required');
     assert.equal((await api.post('/api/doctors', { ...ok, email: 'nope', password: TEMP }, { token: admin })).status, 400);
@@ -449,24 +450,26 @@ describe('Staff accounts: email + password, set up by the administrator', () => 
     const roleId = roles.find((r) => r.name === 'OPERATIONAL_HEAD').id;
     const deptId = (await h.db.query("SELECT id FROM departments WHERE name = 'OPERATIONAL'")).rows[0].id;
     const email = `ops2${Date.now()}@cadovet.test`;
-    const r = await api.post('/api/users', { name: 'Second Ops', email, password: TEMP, role_id: roleId, department_id: deptId }, { token: admin });
+    const r = await api.post('/api/users', { name: 'Second Ops', email, password: TEMP, role_id: roleId, department_id: deptId, location_ids: [await h.firstActiveLocationId()] }, { token: admin });
     assert.equal(r.status, 201, JSON.stringify(r.body));
     const token = await h.loginStaff(email, TEMP);
     assert.ok((await api.get('/api/auth/me', { token })).body.data.permissions.includes('APPOINTMENT_ASSIGN'));
-    assert.equal((await api.post('/api/users', { name: 'Second Ops', email, password: TEMP, role_id: roleId }, { token: admin })).status, 409, 'duplicate email');
+    assert.equal((await api.post('/api/users', { name: 'Second Ops', email, password: TEMP, role_id: roleId, location_ids: [await h.firstActiveLocationId()] }, { token: admin })).status, 409, 'duplicate email');
   });
   it('user creation needs email + password; mobile is optional; customers and doctors have their own pages', async () => {
     const roles = (await api.get('/api/roles', { token: admin })).body.data;
     const id = (n) => roles.find((r) => r.name === n).id;
     const e = () => `u${Date.now()}${Math.floor(Math.random() * 1e6)}@cadovet.test`;
-    assert.equal((await api.post('/api/users', { name: 'No Email', password: TEMP, role_id: id('SUBADMIN') }, { token: admin })).status, 400);
-    assert.equal((await api.post('/api/users', { name: 'No Password', email: e(), role_id: id('SUBADMIN') }, { token: admin })).status, 400);
-    assert.equal((await api.post('/api/users', { name: 'Weak', email: e(), password: 'abc', role_id: id('SUBADMIN') }, { token: admin })).status, 400);
-    assert.equal((await api.post('/api/users', { name: 'Bad Mobile', email: e(), password: TEMP, mobile: '123', role_id: id('SUBADMIN') }, { token: admin })).status, 400);
+    const locationId = await h.firstActiveLocationId();
+    assert.equal((await api.post('/api/users', { name: 'No Email', password: TEMP, role_id: id('PHARMACY'), location_ids: [locationId] }, { token: admin })).status, 400);
+    assert.equal((await api.post('/api/users', { name: 'No Password', email: e(), role_id: id('PHARMACY'), location_ids: [locationId] }, { token: admin })).status, 400);
+    assert.equal((await api.post('/api/users', { name: 'Weak', email: e(), password: 'abc', role_id: id('PHARMACY'), location_ids: [locationId] }, { token: admin })).status, 400);
+    assert.equal((await api.post('/api/users', { name: 'Bad Mobile', email: e(), password: TEMP, mobile: '123', role_id: id('PHARMACY'), location_ids: [locationId] }, { token: admin })).status, 400);
     assert.equal((await api.post('/api/users', { name: 'A Doctor', email: e(), password: TEMP, role_id: id('DOCTOR') }, { token: admin })).status, 400);
     assert.equal((await api.post('/api/users', { name: 'A Customer', email: e(), password: TEMP, role_id: id('CUSTOMER') }, { token: admin })).status, 400);
     assert.equal((await api.post('/api/users', { name: 'Ghost Role', email: e(), password: TEMP, role_id: 999999 }, { token: admin })).status, 400);
-    assert.equal((await api.post('/api/users', { name: 'Ok User', email: e(), password: TEMP, role_id: id('SUBADMIN') }, { token: admin })).status, 201);
+    assert.equal((await api.post('/api/users', { name: 'No Branch', email: e(), password: TEMP, role_id: id('PHARMACY') }, { token: admin })).status, 400, 'a desk role needs at least one branch');
+    assert.equal((await api.post('/api/users', { name: 'Ok User', email: e(), password: TEMP, role_id: id('PHARMACY'), location_ids: [locationId] }, { token: admin })).status, 201);
   });
   it('in production too: staff sign in with a password, and OTP still cannot reach a staff account', () => {
     const script = `
