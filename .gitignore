@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets — never commit real credentials
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Build output
+dist/
+dist-ssr/
+build/
+
+# User-uploaded content (service photos, prescriptions, medicine slips) — runtime data, not source
+cadovet-server/uploads/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.local
+*.suo
+*.sw?
+
+# Test artifacts
+coverage/

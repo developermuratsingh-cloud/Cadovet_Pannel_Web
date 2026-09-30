@@ -1,0 +1,21 @@
+{
+  "name": "cadovet-project",
+  "version": "1.0.0",
+  "description": "Cadovet Veterinary Hospital & Home Pet Healthcare Platform",
+  "scripts": {
+    "start": "bash start.sh",
+    "dev": "bash start.sh",
+    "client": "cd cadovet-client && npm run dev",
+    "server": "cd cadovet-server && node server.js",
+    "build": "cd cadovet-client && npm run build",
+    "test": "cd cadovet-server && npm test",
+    "e2e": "cd e2e && npm install --silent && node run.mjs"
+  },
+  "keywords": [
+    "cadovet",
+    "veterinary",
+    "healthcare"
+  ],
+  "author": "Cadovet",
+  "license": "ISC"
+}

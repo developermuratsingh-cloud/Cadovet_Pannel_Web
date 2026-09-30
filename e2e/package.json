@@ -1,0 +1,17 @@
+{
+  "name": "cadovet-e2e",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "run.mjs",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer-core": "^25.11.0"
+  },
+  "private": true
+}
