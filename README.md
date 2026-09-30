@@ -66,48 +66,6 @@ Every single page and navigation link from the original [https://cadovet.com/](h
 
 ---
 
-## 🔑 Test Credentials
-
-There are **two sign-in routes**, chosen by who you are (the website's *Login* page has a tab for each):
-
-* **Staff — email + password** (admin, operational head, doctors, inventory / pharmacy desks). Staff can change their own password
-  (header → *Change password*), reset a forgotten one (*Forgot password?* → a 6-digit code emailed to them), and an administrator can
-  reset it for them. There is **no OTP route into a staff account**.
-* **Customers — mobile number + 6-digit OTP** (app and website). Pet parents have no password to remember or lose.
-
-**Staff** (development passwords — change them before going live; verified working against the current seed):
-
-| Role | Name | Email | Password | What they see / do |
-| :--- | :--- | :--- | :--- | :--- |
-| **Admin** | Super Admin | `admin@cadovet.com` | `Admin#2026Vet9!` | Everything: users, roles, doctors, all appointments, audit logs |
-| **Operational head** (unlocked, no branch) | Operations Head | `operations.head@cadovet.com` | `OpsHead#2026Rv6!` | Receives **every** appointment request, **assigns a doctor**, registers callers, books for callers, billing. No clinical records |
-| **Operational head** (Main Branch) | Ops Demo | `ops.demo@cadovet.com` | `OpsDemo#2026Lm5!` | Same as above, scoped to Main Branch only |
-| **Operational head** (Andheri Branch) | Ops Andheri | `ops.andheri@cadovet.com` | `OpsAndheri#2026Qz4!` | Same as above, scoped to Andheri Branch only — for testing multi-branch isolation |
-| **Doctor** (Main Branch) | Dr. Ananya Kapoor | `doctor.demo@cadovet.com` | `DoctorDemo#2026Nk4!` | **Only** appointments assigned to her, and those patients/owners/records |
-| **Doctor** (Main + Andheri) | Dr. Multi Branch | `multi.doctor@cadovet.com` | `MultiDoctor#2026Tp8!` | Rostered at two branches — for testing a doctor who works across locations |
-| **Inventory desk** (Main Branch) | Inventory Demo | `inventory.demo@cadovet.com` | `InventoryDemo#2026Wc2!` | Pharmacy & stock only |
-| **Pharmacy desk** (Main Branch) | Pharmacy Demo | `pharmacy.demo@cadovet.com` | `PharmacyDemo#2026Yb7!` | Pharmacy & stock only |
-| **Pharmacy desk** (Andheri Branch) | Pharm Andheri | `pharm.andheri@cadovet.com` | `PharmAndheri#2026Bd9!` | Pharmacy & stock only, scoped to Andheri Branch |
-
-**Customers** (mobile → OTP; in development the backend accepts the fixed code **`123456`** for these numbers only):
-
-| Name | Mobile | Data |
-| :--- | :--- | :--- |
-| Anita Rao | `9000000021` | 1 pet (Rocky, Dog), 1 completed appointment |
-| Vikram Singh | `9000000022` | 1 pet (Bruno, Dog), 1 completed appointment |
-| Emergency Test | `9000000033` | 1 pet (Whiskers, Cat), 1 pending appointment |
-| *Sign-up tests* | `9000000001` … `9000000005` | Register on the app or website with any name |
-
-Any other number gets a random code that is printed in the backend console (`[otp] (SMS not configured) code for …`). The fixed code is
-set by `OTP_TEST_CODE` / `OTP_TEST_MOBILES` in `cadovet-server/.env` (template in `.env.example`); it covers **customer numbers only**,
-never staff, and is **ignored** — with a warning in the log — when `NODE_ENV=production` or a real SMS provider is configured.
-
-**How the password route is protected:** passwords are bcrypt-hashed and must be 8–72 characters with a letter and a number; 10 wrong
-passwords lock the account for 15 minutes; "unknown email" and "wrong password" answer identically and take the same time; a customer
-account can never be entered through the password route; changing or resetting a password ends **every** other session (each access
-token carries a per-account version); an administrator-set temporary password must be replaced at first sign-in; emailed reset codes are
-single-use, expire after 10 minutes, lock after 5 wrong tries and are limited to 3 per hour. Without an SMTP server the reset code is
-printed in the backend console (development).
 
 ---
 
@@ -228,46 +186,7 @@ Set / do these before real users touch it (the API refuses to start in productio
 
 ### 2. Configure Environment
 
-#### Backend (`cadovet-server/.env`)
-```env
-PORT=5001
-DATABASE_URL=postgresql://murat@localhost:5432/cadovet
-JWT_SECRET=cadovet_super_secret_jwt_2024_key
-JWT_EXPIRES_IN=1d
-CORS_ORIGIN=*
-```
 
-### 3. Database Initialization & Migrations
-
-Execute the SQL scripts in order using `psql`:
-
-```bash
-# 1. Initialize schema & base seed
-psql -d cadovet -f cadovet-server/src/database/schema.sql
-psql -d cadovet -f cadovet-server/src/database/seeds.sql
-
-# 2. Apply Phase 2 (Customers & Audit Logs)
-psql -d cadovet -f cadovet-server/src/database/migrate_phase2.sql
-
-# 3. Apply Phase 3 (Pets Table, Permissions & Test Accounts)
-psql -d cadovet -f cadovet-server/src/database/migrate_phase3.sql
-
-# 4. Apply Phase 4 (Services, Doctors, and Appointments)
-psql -d cadovet -f cadovet-server/src/database/migrate_phase4.sql
-
-# 5. Apply Phase 5 & 6 (Clinical Records, Prescriptions, Invoices, and Inventory)
-psql -d cadovet -f cadovet-server/src/database/migrate_phase5_6.sql
-
-# 6. Mobile app, documents/coupons/referrals, blog, password reset, OTP sign-in, production hardening
-psql -d cadovet -f cadovet-server/src/database/migrate_mobile.sql
-psql -d cadovet -f cadovet-server/src/database/migrate_records_offers.sql
-psql -d cadovet -f cadovet-server/src/database/migrate_blog.sql
-psql -d cadovet -f cadovet-server/src/database/migrate_password_reset.sql
-psql -d cadovet -f cadovet-server/src/database/migrate_otp.sql
-psql -d cadovet -f cadovet-server/src/database/migrate_hardening.sql   # fails loudly if existing data double-books a slot
-psql -d cadovet -f cadovet-server/src/database/migrate_workflow.sql    # operational-head / doctor roles, assignment columns
-psql -d cadovet -f cadovet-server/src/database/migrate_staff_auth.sql  # forced password change, session versioning
-```
 `npm test` (see *Automated tests*) builds a throw-away database from exactly these files, so they are proven to work on a fresh install.
 
 ### 4. Build the Project
@@ -353,33 +272,4 @@ npm run dev
 
 ---
 
-## 📡 Complete REST API Endpoints Reference
 
-| Method | Endpoint | Access / Permission | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/login` | Public | Login with email or mobile identifier |
-| `POST` | `/api/auth/signup` | Public | Register a new customer account |
-| `GET` | `/api/auth/me` | Authenticated | Fetch current user profile and assigned permissions |
-| `GET` | `/api/appointments` | `APPOINTMENT_VIEW` | List appointments (scoped for customers and doctors) |
-| `POST` | `/api/appointments` | `APPOINTMENT_CREATE` | Book / schedule a veterinary appointment |
-| `PATCH` | `/api/appointments/:id/status` | `APPOINTMENT_UPDATE` | Update visit status (CONFIRMED, COMPLETED, CANCELLED) |
-| `DELETE` | `/api/appointments/:id` | `APPOINTMENT_CANCEL` | Cancel an appointment |
-| `GET` | `/api/services` | `SERVICE_VIEW` | List hospital services with prices and categories |
-| `POST` | `/api/services` | `SERVICE_MANAGE` | Create new hospital service |
-| `PUT` | `/api/services/:id` | `SERVICE_MANAGE` | Update service pricing and details |
-| `GET` | `/api/doctors` | `DOCTOR_VIEW` | List veterinary doctors and specialists |
-| `PUT` | `/api/doctors/:id` | `DOCTOR_UPDATE` | Update doctor profile, consultation fee, and schedule |
-| `GET` | `/api/medical-records` | `MEDICAL_RECORD_VIEW` | List clinical records and digital prescriptions |
-| `POST` | `/api/medical-records` | `MEDICAL_RECORD_MANAGE` | Create clinical consultation notes & prescription |
-| `GET` | `/api/invoices` | `INVOICE_VIEW` | List hospital invoices & revenue metrics |
-| `POST` | `/api/invoices` | `INVOICE_MANAGE` | Generate new billing invoice |
-| `PATCH` | `/api/invoices/:id/status` | `INVOICE_MANAGE` | Mark invoice as PAID / PENDING |
-| `GET` | `/api/inventory` | `INVENTORY_VIEW` | List pharmacy supplies, stock counts, and low-stock alerts |
-| `POST` | `/api/inventory` | `INVENTORY_MANAGE` | Add new pharmaceutical or surgical supply |
-| `PATCH` | `/api/inventory/:id/adjust-stock` | `INVENTORY_MANAGE` | Adjust inventory stock quantity |
-| `GET` | `/api/pets` | `PET_VIEW` | List pets (scoped to customer for CUSTOMER role) |
-| `POST` | `/api/pets` | `PET_CREATE` | Register a new pet patient |
-| `GET` | `/api/customers` | `CUSTOMER_VIEW` | Customer directory with search & status filters |
-| `GET` | `/api/users` | `USER_CREATE` | List staff and administrators |
-| `GET` | `/api/roles` | `ROLE_MANAGE` | List roles and assigned permissions |
-| `GET` | `/api/audit-logs` | `REPORT_VIEW` | System audit trail |
